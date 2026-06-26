@@ -9,6 +9,8 @@ interface KanbanColumnProps {
   title: string;
   count: number;
   colors: { bg: string; text: string; border: string; dot: string };
+  droppableDisabled?: boolean;
+  readOnly?: boolean;
   children: React.ReactNode;
 }
 
@@ -17,9 +19,14 @@ export function KanbanColumn({
   title,
   count,
   colors,
+  droppableDisabled = false,
+  readOnly = false,
   children,
 }: KanbanColumnProps) {
-  const { setNodeRef, isOver } = useDroppable({ id: status });
+  const { setNodeRef, isOver } = useDroppable({
+    id: status,
+    disabled: droppableDisabled || readOnly,
+  });
 
   return (
     <div
@@ -27,7 +34,10 @@ export function KanbanColumn({
       className={cn(
         "flex-shrink-0 w-72 snap-start rounded-xl border transition-colors duration-200",
         colors.border,
-        isOver ? "bg-indigo-50/50 border-indigo-300" : "bg-slate-50/50"
+        droppableDisabled && "opacity-75",
+        isOver && !droppableDisabled && !readOnly
+          ? "bg-indigo-50/50 border-indigo-300"
+          : "bg-slate-50/50"
       )}
     >
       <div className="flex items-center justify-between p-4 border-b border-slate-200/60">

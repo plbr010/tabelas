@@ -10,10 +10,16 @@ import { cn, formatDate, getInitials } from "@/lib/utils";
 interface LeadCardProps {
   lead: Lead;
   isAdmin: boolean;
+  draggable?: boolean;
   isDragging?: boolean;
 }
 
-export function LeadCard({ lead, isAdmin, isDragging }: LeadCardProps) {
+export function LeadCard({
+  lead,
+  isAdmin,
+  draggable = true,
+  isDragging,
+}: LeadCardProps) {
   const {
     attributes,
     listeners,
@@ -21,7 +27,7 @@ export function LeadCard({ lead, isAdmin, isDragging }: LeadCardProps) {
     transform,
     transition,
     isDragging: isSortableDragging,
-  } = useSortable({ id: lead.id });
+  } = useSortable({ id: lead.id, disabled: !draggable });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -35,7 +41,8 @@ export function LeadCard({ lead, isAdmin, isDragging }: LeadCardProps) {
       {...attributes}
       {...listeners}
       className={cn(
-        "group rounded-lg border border-slate-200/80 bg-white p-4 shadow-sm transition-all duration-200 cursor-grab active:cursor-grabbing",
+        "group rounded-lg border border-slate-200/80 bg-white p-4 shadow-sm transition-all duration-200",
+        draggable ? "cursor-grab active:cursor-grabbing" : "cursor-default",
         "hover:shadow-md hover:border-slate-300/80",
         (isDragging || isSortableDragging) && "opacity-50 shadow-lg rotate-2"
       )}

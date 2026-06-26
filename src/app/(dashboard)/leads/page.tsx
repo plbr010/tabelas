@@ -43,7 +43,9 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
           {isAdmin ? "Kanban de Leads" : "Meus Leads"}
         </h1>
         <p className="text-sm text-slate-500 mt-1">
-          Arraste os cards entre as colunas para atualizar o status
+          {isAdmin
+            ? "Arraste os cards entre as colunas para atualizar o status"
+            : "Acompanhe em qual etapa cada lead está — apenas o administrador move as etapas"}
         </p>
       </div>
 

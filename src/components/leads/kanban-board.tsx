@@ -32,6 +32,39 @@ interface KanbanBoardProps {
   isAdmin: boolean;
 }
 
+function KanbanReadOnly({ leads, isAdmin }: KanbanBoardProps) {
+  return (
+    <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory">
+      {KANBAN_COLUMNS.map((status) => {
+        const columnLeads = leads.filter((l) => l.status === status);
+        const colors = LEAD_STATUS_COLORS[status];
+
+        return (
+          <KanbanColumn
+            key={status}
+            status={status}
+            title={LEAD_STATUS_LABELS[status]}
+            count={columnLeads.length}
+            colors={colors}
+            readOnly
+          >
+            <div className="space-y-3 min-h-[100px]">
+              {columnLeads.map((lead) => (
+                <LeadCard
+                  key={lead.id}
+                  lead={lead}
+                  isAdmin={isAdmin}
+                  draggable={false}
+                />
+              ))}
+            </div>
+          </KanbanColumn>
+        );
+      })}
+    </div>
+  );
+}
+
 export function KanbanBoard({ leads, isAdmin }: KanbanBoardProps) {
   const [items, setItems] = useState(leads);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -41,6 +74,10 @@ export function KanbanBoard({ leads, isAdmin }: KanbanBoardProps) {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor)
   );
+
+  if (!isAdmin) {
+    return <KanbanReadOnly leads={leads} isAdmin={isAdmin} />;
+  }
 
   const activeLead = activeId
     ? items.find((l) => l.id === activeId)
@@ -112,6 +149,7 @@ export function KanbanBoard({ leads, isAdmin }: KanbanBoardProps) {
                       key={lead.id}
                       lead={lead}
                       isAdmin={isAdmin}
+                      draggable
                     />
                   ))}
                 </div>
@@ -123,7 +161,7 @@ export function KanbanBoard({ leads, isAdmin }: KanbanBoardProps) {
 
       <DragOverlay>
         {activeLead && (
-          <LeadCard lead={activeLead} isAdmin={isAdmin} isDragging />
+          <LeadCard lead={activeLead} isAdmin={isAdmin} draggable isDragging />
         )}
       </DragOverlay>
     </DndContext>

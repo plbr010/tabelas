@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { StatusBadge } from "@/components/ui/badge";
 import { LEAD_STATUS_LABELS } from "@/lib/utils";
 import type { Lead, Profile } from "@/types/database";
 
@@ -67,10 +68,6 @@ export function LeadForm({
     router.refresh();
   }
 
-  const statusOptions = Object.entries(LEAD_STATUS_LABELS).map(
-    ([value, label]) => ({ value, label })
-  );
-
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -111,13 +108,39 @@ export function LeadForm({
           placeholder="Ex: Tecnologia, Saúde, Alimentação"
           {...register("niche")}
         />
-        <Select
-          label="Status"
-          id="status"
-          options={statusOptions}
-          error={errors.status?.message}
-          {...register("status")}
-        />
+        {isAdmin ? (
+          <Select
+            label="Status"
+            id="status"
+            options={Object.entries(LEAD_STATUS_LABELS).map(([value, label]) => ({
+              value,
+              label,
+            }))}
+            error={errors.status?.message}
+            {...register("status")}
+          />
+        ) : isEditing ? (
+          <div className="space-y-2">
+            <span className="block text-sm font-medium text-slate-700">
+              Etapa atual
+            </span>
+            <StatusBadge status={lead!.status} />
+            <p className="text-xs text-slate-500">
+              O administrador atualiza a etapa. Você pode acompanhar aqui e no
+              kanban.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <span className="block text-sm font-medium text-slate-700">
+              Etapa inicial
+            </span>
+            <StatusBadge status="novo" />
+            <p className="text-xs text-slate-500">
+              Novos leads começam como &quot;Novo Interessado&quot;.
+            </p>
+          </div>
+        )}
         {isAdmin && freelancers && (
           <Select
             label="Freelancer Responsável"

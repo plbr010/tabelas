@@ -15,6 +15,21 @@ import type {
 } from "@/types/database";
 import type { LeadFormData } from "@/lib/validations";
 import { resolveUserRole } from "@/lib/constants";
+import type { LeadStatus } from "@/types/database";
+
+function validateLeadStatusChange(
+  role: UserRole,
+  currentStatus: LeadStatus | undefined,
+  newStatus: LeadStatus | undefined
+): string | null {
+  if (!newStatus || role === "admin") return null;
+
+  if (!currentStatus || newStatus !== currentStatus) {
+    return "Apenas administradores podem alterar o status do lead";
+  }
+
+  return null;
+}
 
 export async function getCurrentProfile(): Promise<Profile | null> {
   const supabase = await createClient();
@@ -109,6 +124,13 @@ export async function createLead(data: LeadFormData): Promise<{ error?: string }
       ? data.freelancer_id
       : profile.id;
 
+  const statusError = validateLeadStatusChange(
+    profile.role,
+    undefined,
+    profile.role === "admin" ? data.status : "novo"
+  );
+  if (statusError) return { error: statusError };
+
   const { error } = await supabase.from("leads").insert({
     company_name: data.company_name,
     contact_name: data.contact_name,
@@ -116,7 +138,7 @@ export async function createLead(data: LeadFormData): Promise<{ error?: string }
     city: data.city,
     niche: data.niche || null,
     notes: data.notes || null,
-    status: data.status,
+    status: profile.role === "admin" ? data.status : "novo",
     freelancer_id: freelancerId,
   });
 
@@ -136,15 +158,27 @@ export async function updateLead(
   const profile = await getCurrentProfile();
   if (!profile) return { error: "Usuário não autenticado" };
 
+  const existing = await getLeadById(id);
+  if (!existing) return { error: "Lead não encontrado" };
+
+  if (data.status) {
+    const statusError = validateLeadStatusChange(
+      profile.role,
+      existing.status,
+      data.status
+    );
+    if (statusError) return { error: statusError };
+  }
+
   const updateData: Record<string, unknown> = {};
   if (data.company_name) updateData.company_name = data.company_name;
   if (data.contact_name) updateData.contact_name = data.contact_name;
   if (data.city) updateData.city = data.city;
   if (data.niche !== undefined) updateData.niche = data.niche || null;
   if (data.notes !== undefined) updateData.notes = data.notes || null;
-  if (data.status) updateData.status = data.status;
 
   if (profile.role === "admin") {
+    if (data.status) updateData.status = data.status;
     if (data.whatsapp) updateData.whatsapp = data.whatsapp;
     if (data.freelancer_id) updateData.freelancer_id = data.freelancer_id;
   }
@@ -163,6 +197,11 @@ export async function updateLeadStatus(
   id: string,
   status: Lead["status"]
 ): Promise<{ error?: string }> {
+  const profile = await getCurrentProfile();
+  if (!profile || profile.role !== "admin") {
+    return { error: "Apenas administradores podem alterar o status" };
+  }
+
   return updateLead(id, { status });
 }
 

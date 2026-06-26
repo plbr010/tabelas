@@ -147,6 +147,9 @@ BEGIN
     IF OLD.freelancer_id IS DISTINCT FROM NEW.freelancer_id THEN
       RAISE EXCEPTION 'Freelancers não podem transferir leads para outro freelancer';
     END IF;
+    IF OLD.status IS DISTINCT FROM NEW.status THEN
+      RAISE EXCEPTION 'Apenas administradores podem alterar o status do lead';
+    END IF;
   END IF;
   RETURN NEW;
 END;
