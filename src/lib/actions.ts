@@ -15,6 +15,7 @@ import type {
 } from "@/types/database";
 import type { LeadFormData } from "@/lib/validations";
 import { resolveUserRole } from "@/lib/constants";
+import { normalizePhone } from "@/lib/utils";
 import type { LeadStatus } from "@/types/database";
 
 function validateLeadStatusChange(
@@ -22,11 +23,28 @@ function validateLeadStatusChange(
   currentStatus: LeadStatus | undefined,
   newStatus: LeadStatus | undefined
 ): string | null {
-  if (!newStatus || role === "admin") return null;
+  if (!newStatus || role === "admin" || !currentStatus) return null;
 
-  if (!currentStatus || newStatus !== currentStatus) {
+  if (newStatus !== currentStatus) {
     return "Apenas administradores podem alterar o status do lead";
   }
+
+  return null;
+}
+
+async function assertWhatsappAvailable(
+  whatsapp: string,
+  excludeId?: string
+): Promise<string | null> {
+  const normalized = normalizePhone(whatsapp);
+  if (normalized.length < 10) return "WhatsApp inválido";
+
+  const admin = createAdminClient();
+  let query = admin.from("leads").select("id").eq("whatsapp", normalized);
+  if (excludeId) query = query.neq("id", excludeId);
+
+  const { data } = await query.maybeSingle();
+  if (data) return "Este WhatsApp já está cadastrado";
 
   return null;
 }
@@ -124,17 +142,14 @@ export async function createLead(data: LeadFormData): Promise<{ error?: string }
       ? data.freelancer_id
       : profile.id;
 
-  const statusError = validateLeadStatusChange(
-    profile.role,
-    undefined,
-    profile.role === "admin" ? data.status : "novo"
-  );
-  if (statusError) return { error: statusError };
+  const whatsapp = normalizePhone(data.whatsapp);
+  const whatsappError = await assertWhatsappAvailable(whatsapp);
+  if (whatsappError) return { error: whatsappError };
 
   const { error } = await supabase.from("leads").insert({
     company_name: data.company_name,
     contact_name: data.contact_name,
-    whatsapp: data.whatsapp,
+    whatsapp,
     city: data.city,
     niche: data.niche || null,
     notes: data.notes || null,
@@ -142,7 +157,12 @@ export async function createLead(data: LeadFormData): Promise<{ error?: string }
     freelancer_id: freelancerId,
   });
 
-  if (error) return { error: error.message };
+  if (error) {
+    if (error.code === "23505") {
+      return { error: "Este WhatsApp já está cadastrado" };
+    }
+    return { error: error.message };
+  }
 
   revalidatePath("/leads");
   revalidatePath("/dashboard");
@@ -179,12 +199,22 @@ export async function updateLead(
 
   if (profile.role === "admin") {
     if (data.status) updateData.status = data.status;
-    if (data.whatsapp) updateData.whatsapp = data.whatsapp;
+    if (data.whatsapp) {
+      const whatsapp = normalizePhone(data.whatsapp);
+      const whatsappError = await assertWhatsappAvailable(whatsapp, id);
+      if (whatsappError) return { error: whatsappError };
+      updateData.whatsapp = whatsapp;
+    }
     if (data.freelancer_id) updateData.freelancer_id = data.freelancer_id;
   }
 
   const { error } = await supabase.from("leads").update(updateData).eq("id", id);
-  if (error) return { error: error.message };
+  if (error) {
+    if (error.code === "23505") {
+      return { error: "Este WhatsApp já está cadastrado" };
+    }
+    return { error: error.message };
+  }
 
   revalidatePath("/leads");
   revalidatePath("/dashboard");

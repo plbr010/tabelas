@@ -30,6 +30,10 @@ export function formatPercent(value: number): string {
   return `${value.toFixed(1)}%`;
 }
 
+export function normalizePhone(value: string): string {
+  return value.replace(/\D/g, "");
+}
+
 export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
   novo: "Novo Interessado",
   contato: "Em Contato",

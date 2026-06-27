@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS leads (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   company_name TEXT NOT NULL,
   contact_name TEXT NOT NULL,
-  whatsapp TEXT NOT NULL,
+  whatsapp TEXT NOT NULL UNIQUE,
   city TEXT NOT NULL,
   niche TEXT,
   notes TEXT,
@@ -56,6 +56,8 @@ CREATE TABLE IF NOT EXISTS leads (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   closed_at TIMESTAMPTZ
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_leads_whatsapp_unique ON leads (whatsapp);
 
 -- Trigger: criar perfil ao registrar usuário (sempre freelancer; admin definido pelo servidor)
 CREATE OR REPLACE FUNCTION handle_new_user()
